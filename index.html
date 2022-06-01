@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html class="ui-page-login">
+
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport"
+			content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<title>未完成人员名单查询</title>
+		<link href="css/mui.min.css" rel="stylesheet" />
+		<link href="css/style.css" rel="stylesheet" />
+		<style>
+			.mui-content {
+				background-color: #F7F7F7;
+			}
+
+			#mainForm {
+				position: absolute;
+				margin-top: 20%;
+				margin-left: 15%;
+				width: 40%;
+				height: 60%;
+			}
+
+			body {
+				background-color: #F7F7F7;
+			}
+
+			.mui-bar-nav {
+				box-shadow: 0 0px 0px #ccc;
+			}
+
+			.mui-btn {
+				padding: 5px;
+			}
+
+			#chooseFile1 {
+				margin-top: 2rem;
+			}
+
+			#chooseBranch {
+				margin-top: 2rem;
+			}
+
+			#chooseFile2 {
+				margin-top: 2rem;
+			}
+
+			#beginQuery {
+				margin-top: 2rem;
+				margin-left: 2rem;
+				width: 40%;
+			}
+
+		</style>
+	</head>
+
+	<body>
+		<div class="mui-content" style="height: 100%;">
+			<div>
+				<img src="img/background.jpg" style="position: absolute; height: 100%;">
+			</div>
+			<div>
+				<img src="img/CollegeLogo.png"
+					style="position: absolute; width: 25rem;margin-top: 1rem; padding-left: 1rem;">
+			</div>
+			<div>
+				<img src="img/text.png"
+					style="position: absolute; width: 22rem;margin-top: 1rem; right: 20rem;opacity: 0.7;">
+			</div>
+			<div>
+				<img src="img/youth.png" style="position: absolute; width: 8rem;top: 9.5rem; left: 14rem;">
+			</div>
+			<div>
+				<img src="img/youthLogo.png" style="position: absolute; width: 15rem;top: 8rem; left: 22rem;">
+			</div>
+			<div id="mainForm">
+				<div id="chooseFile1">
+					<label style="color: #646464; font-weight: 600;">请选择学习情况名单文件（*.xlsx;*.xls）:</label>
+					<input type="file" id="excel" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" >
+				</div>
+				<div id="chooseBranch">
+					<label style="color: #646464; font-weight: 600;">选择您所在的支部:</label>
+					<div class="mui-input-row" style="width: 50%;margin-top: 1rem;">
+						<select class="selectBegin formContent" id="branchChoose" style="font-size: 1rem;">
+							<option id="tipOption" value="0" style="display: none;" disabled selected>请先选择学习情况名单文件</option>
+						</select>
+					</div>
+				</div>
+				<div id="chooseFile2">
+					<label style="color: #646464; font-weight: 600;">请选择支部团员名单文件（*.xlsx;*.xls）:</label>
+					<input type="file" id="excel2" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" >
+				</div>
+				<div>
+					<div class="mui-content-padded" id="beginQuery">
+						<button id="query" class="mui-btn mui-btn-block mui-btn-primary">导出 未学习名单</button>
+					</div>
+				</div>
+			</div>
+<!-- 			<div id="copyright">
+				<p style="position:absolute;bottom:0.2rem;text-align: center;width:100%;">Copyright © 冯畅 版权所有
+				</p>
+			</div> -->
+		</div>
+	</body>
+	<script src="js/mui.min.js"></script>
+	<script src="js/jquery-3.1.1.min.js"></script>
+	<script src="js/xlsx.full.min.js"></script>
+	<script>
+		var finishedData; //所有已完成
+		var allPeopleData; //支部总名单
+		var myBranchData = new Array(); //支部完成名单
+		var unfinishedData = ""; //支部未完成名单
+		var allUnfinishedData = []; //支部未完成名单
+		var allUnfinishedStr="";
+		var branchName = []; //各支部名称
+
+		document.querySelector('#excel').onchange = function(e) {
+			let file = e.target.files[0];
+			// console.log(file);
+			readWorkbookFromLocalFile(file, function(workbook) {
+				readWorkbook(workbook);
+			});
+		}
+
+		document.querySelector('#excel2').onchange = function(e) {
+			let file = e.target.files[0];
+			readWorkbookFromLocalFile(file, function(workbook) {
+				readWorkbook2(workbook);
+			});
+		}
+
+		//查询未完成名单
+		document.getElementById("query").addEventListener('tap', function(event) {
+			var myBranchName = $('#branchChoose').find("option:selected").text();
+			if(myBranchName=="所有团支部"){
+				for (var jj in allPeopleData) {
+					if (!isExist(allPeopleData[jj].split(",")[1], finishedData) && !isExist(allPeopleData[jj].split(",")[2], finishedData)) {
+						allUnfinishedData.push(allPeopleData[jj].split(",")[0]);
+						allUnfinishedData.push(allPeopleData[jj].split(",")[1]);
+						allUnfinishedData.push(allPeopleData[jj].split(",")[2]);
+					}
+				}
+				var tnnd=allUnfinishedData[0];
+				for(var kk=0;kk<allUnfinishedData.length;kk=kk+3){
+					if(tnnd==allUnfinishedData[kk]){
+						allUnfinishedStr=allUnfinishedStr+allUnfinishedData[kk]+','+allUnfinishedData[kk+1]+','+allUnfinishedData[kk+2]+"\r\n";
+					}
+					else{
+						tnnd=allUnfinishedData[kk];
+						allUnfinishedStr=allUnfinishedStr+','+','+"\r\n";
+						allUnfinishedStr=allUnfinishedStr+allUnfinishedData[kk]+','+allUnfinishedData[kk+1]+','+allUnfinishedData[kk+2]+"\r\n";
+					}
+				}
+				allUnfinishedStr=allUnfinishedStr+"\r\n"+"学院总体学习完成率："+toPercent(1-(allUnfinishedData.length/3)/allPeopleData.length);
+				allUnfinishedStr="\ufeff"+allUnfinishedStr;
+				//获取当前日期
+				var now = new Date();
+				var month = now.getMonth()+1;//得到月份
+				var date = now.getDate();//得到日期
+				
+				var blob = new Blob([allUnfinishedStr], {
+					type: "text/csv;charset=utf-8"
+				});
+				saveAs(blob, "各支部“青年大学习”未完成名单（"+month+"月"+date+"日）"+".csv");
+				allPeopleData=[];
+				myBranchData=[];
+				unfinishedData = "";
+				allUnfinishedData = [];
+				allUnfinishedStr="";
+			}else{
+				//将本支部完成名单提取出来
+				for (var ii in finishedData) {
+					if (finishedData[ii].split(",")[4] == myBranchName) {
+						myBranchData.push(finishedData[ii]);
+					}
+				}
+				// console.log(myBranchData);
+				// console.log(myBranchData.length);
+				for (var jj in allPeopleData) {
+					if (!isExist(allPeopleData[jj].split(",")[0], finishedData) && !isExist(allPeopleData[jj].split(",")[1], finishedData)) {
+						// unfinishedData.push(allPeopleData[jj]);
+						unfinishedData = unfinishedData + allPeopleData[jj].split(",")[0] + " " + allPeopleData[jj].split(",")[1] + '\n';
+					}
+				}
+				// console.log(unfinishedData);
+				//导出未完成名单
+				if (unfinishedData != "") {
+					var blob = new Blob([unfinishedData], {
+						type: "text/plain;charset=utf-8"
+					});
+					saveAs(blob, myBranchName + "未完成名单.txt");
+					allPeopleData=[];
+					myBranchData=[];
+					unfinishedData = "";
+				} else {
+					mui.alert("您支部的团员已全部完成学习！");
+				}
+			}
+		});
+
+		//判断str2中是否存在str1
+		function isExist(str1, str2) {
+			for (var i in str2) {
+				if (str2[i].split(",")[5].indexOf(str1) !== -1) {
+					return true;
+				}
+			}
+			return false;
+		}
+		// 转换百分数保留两位小数
+		function toPercent(point){
+		    var str=Number(point*100).toFixed(2);
+		    str+="%";
+		    return str;
+		}
+		// 读取本地excel文件，读取Excel文件对象
+		function readWorkbookFromLocalFile(file, callback) {
+			var reader = new FileReader();
+			reader.onload = function(e) {
+				var data = e.target.result;
+				var workbook = XLSX.read(data, {
+					type: 'binary'
+				});
+				// console.log(workbook);
+				if (callback) callback(workbook);
+			};
+			reader.readAsBinaryString(file);
+		}
+		// 转成cvs 要注意Execel表格内容不能包含英文的,不然解析出来的数据格式会有问题
+		function readWorkbook(workbook) {
+			var sheetNames = workbook.SheetNames; // 工作表名称集合
+			var worksheet = workbook.Sheets[sheetNames[0]]; // 这里我们只读取第一张sheet
+			var csv = XLSX.utils.sheet_to_csv(worksheet);
+			// console.log(csv);
+			finishedData = csv.split('\n'); // 转化为数组
+			finishedData.shift();
+			finishedData.shift(); //除去前两行
+			finishedData.pop(); // 最后一行没用的
+			// console.log(finishedData); // 打印输出的数组
+			//将各支部名称提取出来
+			for (var i in finishedData) {
+				// console.log(finishedData[i].split(",")[4]);
+				var index = $.inArray(finishedData[i].split(",")[4], branchName);
+				if (index < 0 && finishedData[i].split(",")[4]!="") {
+					branchName.push(finishedData[i].split(",")[4]);
+				}
+			}
+			//为select动态添加选项
+			$('#tipOption').text("请选择所在支部");
+			for (var j in branchName){
+				$('#branchChoose').append(new Option(branchName[j], branchName[j])); 
+			}
+			$('#branchChoose').append(new Option("所有团支部", "所有团支部"));//添加所有团支部选项
+		}
+
+		function readWorkbook2(workbook) {
+			var sheetNames = workbook.SheetNames; // 工作表名称集合
+			var worksheet = workbook.Sheets[sheetNames[0]]; // 这里我们只读取第一张sheet
+			var csv = XLSX.utils.sheet_to_csv(worksheet);
+			// console.log(csv);
+			allPeopleData = csv.split('\n'); // 转化为数组
+			allPeopleData.pop(); // 最后一行没用的
+			// console.log(allPeopleData); // 打印输出的数组
+		}
+		
+		//以下为导出txt文件功能代码
+		(function(a, b) {
+			if ("function" == typeof define && define.amd) define([], b);
+			else if ("undefined" != typeof exports) b();
+			else {
+				b(), a.FileSaver = {
+					exports: {}
+				}.exports
+			}
+		})(this, function() {
+			"use strict";
+
+			function b(a, b) {
+				return "undefined" == typeof b ? b = {
+					autoBom: !1
+				} : "object" != typeof b && (console.warn("Deprecated: Expected third argument to be a object"), b = {
+					autoBom: !b
+				}), b.autoBom && /^\s*(?:text\/\S*|application\/xml|\S*\/\S*\+xml)\s*;.*charset\s*=\s*utf-8/i.test(a
+					.type) ? new Blob(["\uFEFF", a], {
+					type: a.type
+				}) : a
+			}
+
+			function c(b, c, d) {
+				var e = new XMLHttpRequest;
+				e.open("GET", b), e.responseType = "blob", e.onload = function() {
+					a(e.response, c, d)
+				}, e.onerror = function() {
+					console.error("could not download file")
+				}, e.send()
+			}
+
+			function d(a) {
+				var b = new XMLHttpRequest;
+				b.open("HEAD", a, !1);
+				try {
+					b.send()
+				} catch (a) {}
+				return 200 <= b.status && 299 >= b.status
+			}
+
+			function e(a) {
+				try {
+					a.dispatchEvent(new MouseEvent("click"))
+				} catch (c) {
+					var b = document.createEvent("MouseEvents");
+					b.initMouseEvent("click", !0, !0, window, 0, 0, 0, 80, 20, !1, !1, !1, !1, 0, null), a.dispatchEvent(
+						b)
+				}
+			}
+			var f = "object" == typeof window && window.window === window ? window : "object" == typeof self && self
+				.self === self ? self : "object" == typeof global && global.global === global ? global : void 0,
+				a = f.saveAs || ("object" != typeof window || window !== f ? function() {} : "download" in
+					HTMLAnchorElement.prototype ? function(b, g, h) {
+						var i = f.URL || f.webkitURL,
+							j = document.createElement("a");
+						g = g || b.name || "download", j.download = g, j.rel = "noopener", "string" == typeof b ? (j
+							.href = b, j.origin === location.origin ? e(j) : d(j.href) ? c(b, g, h) : e(j, j.target =
+								"_blank")) : (j.href = i.createObjectURL(b), setTimeout(function() {
+							i.revokeObjectURL(j.href)
+						}, 4E4), setTimeout(function() {
+							e(j)
+						}, 0))
+					} : "msSaveOrOpenBlob" in navigator ? function(f, g, h) {
+						if (g = g || f.name || "download", "string" != typeof f) navigator.msSaveOrOpenBlob(b(f, h), g);
+						else if (d(f)) c(f, g, h);
+						else {
+							var i = document.createElement("a");
+							i.href = f, i.target = "_blank", setTimeout(function() {
+								e(i)
+							})
+						}
+					} : function(a, b, d, e) {
+						if (e = e || open("", "_blank"), e && (e.document.title = e.document.body.innerText =
+								"downloading..."), "string" == typeof a) return c(a, b, d);
+						var g = "application/octet-stream" === a.type,
+							h = /constructor/i.test(f.HTMLElement) || f.safari,
+							i = /CriOS\/[\d]+/.test(navigator.userAgent);
+						if ((i || g && h) && "undefined" != typeof FileReader) {
+							var j = new FileReader;
+							j.onloadend = function() {
+								var a = j.result;
+								a = i ? a : a.replace(/^data:[^;]*;/, "data:attachment/file;"), e ? e.location.href =
+									a : location = a, e = null
+							}, j.readAsDataURL(a)
+						} else {
+							var k = f.URL || f.webkitURL,
+								l = k.createObjectURL(a);
+							e ? e.location = l : location.href = l, e = null, setTimeout(function() {
+								k.revokeObjectURL(l)
+							}, 4E4)
+						}
+					});
+			f.saveAs = a.saveAs = a, "undefined" != typeof module && (module.exports = a)
+		});
+	</script>
+</html>
